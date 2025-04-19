@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker v52 (Realtime Data, Team & Admin Integration)</title>
+    <!-- Include jQuery, jQuery UI and XLSX Library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css"
+    />
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0; padding: 0;
+      }
+      .container {
+        max-width: 800px;
+        margin: 80px auto 20px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      /* Styling for Authentication Page */
+      .auth-form { margin-bottom: 20px; }
+      input,
+      button,
+      select {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        cursor: pointer;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+      }
+      button:hover { background-color: #45a049; }
+      h1, h2, h3 { text-align: center; }
+      .toggle-link {
+        color: #4caf50;
+        text-align: center;
+        cursor: pointer;
+        margin-top: 5px;
+        display: block;
+        text-decoration: underline;
+      }
+      .hidden { display: none; }
+      /* Header for Main App */
+      .header {
+        position: fixed;
+        top: 0; right: 0; left: 0;
+        background-color: #4caf50;
+        color: white;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+      }
+      .header h1 { margin: 0; font-size: 1.5em; }
+      .user-fullname { font-size: 1.8em; font-weight: bold; }
+      .balance-display { font-size: 1.2em; }
+      .tabs {
+        display: flex;
+        margin-bottom: 20px;
+        cursor: move;
+      }
+      .tab {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 4px 4px 0 0;
+        margin-right: 2px;
+        user-select: none;
+      }
+      .tab:last-child { margin-right: 0; }
+      .tab.active {
+        background-color: #4caf50;
+        color: white;
+        border-bottom: none;
+      }
+      .tab-content {
+        display: none;
+        border: 1px solid #ccc;
+        border-radius: 0 0 4px 4px;
+        padding: 20px;
+      }
+      .tab-content.active { display: block; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      table, th, td { border: 1px solid #ddd; }
+      th, td { padding: 10px; text-align: center; }
+      th { background-color: #f2f2f2; }
+      .admin-user-list-table td,
+      .admin-user-list-table th { padding: 4px 6px; font-size: 12px; }
+      .report-summary {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .export-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      .export-buttons button { width: 48%; }
+      .logout-btn {
+        background-color: #d9534f;
+        min-width: 90px;
+        min-height: 45px;
+        font-size: 1.1em;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        margin: 0 auto 20px;
+        display: block;
+        border-radius: 8px;
+      }
+      .logout-btn:hover { background-color: #c9302c; }
+      #transactionListSection { margin-top: 40px; }
+      .action-btn {
+        padding: 4px 10px;
+        margin: 0 2px;
+        border-radius: 4px;
+        font-size: 0.95em;
+        border: none;
+        cursor: pointer;
+        display: inline-block;
+      }
+      .edit-btn { background: #0275d8; color: #fff; }
+      .edit-btn:hover { background: #025aa5; }
+      .delete-btn { background: #d9534f; color: #fff; }
+      .delete-btn:hover { background: #c9302c; }
+      .save-btn { background: #5cb85c; color: #fff; }
+      .save-btn:hover { background: #449d44; }
+      .cancel-btn { background: #f0ad4e; color: #fff; }
+      .cancel-btn:hover { background: #ec971f; }
+      .admin-action-dropdown { padding: 4px; font-size: 0.95em; }
+      .take-action-btn {
+        padding: 4px 10px;
+        margin-left: 5px;
+        font-size: 0.95em;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        background-color: #888;
+        color: #fff;
+      }
+      .bottom-nav-outer {
+        width: 100%;
+        background: #fff;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 200;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.05);
+      }
+      .bottom-nav {
+        display: flex;
+        border-top: 1px solid #ccc;
+        cursor: move;
+      }
+      .bottom-nav .tab {
+        border-radius: 0;
+        margin: 0;
+        border: none;
+        font-size: 1em;
+        cursor: move;
+      }
+      .bottom-nav .tab:not(:last-child) { border-right: 1px solid #ccc; }
+      #teamMembersSection { display: none; }
+      .team-member-list table th,
+      .team-member-list table td { padding: 8px 4px !important; }
+      .team-action-btn {
+        margin: 0 2px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        background-color: #0275d8;
+        color: white;
+        display: inline-block;
+      }
+      .team-action-btn:hover { background-color: #025aa5; }
+      .admin-user-data-section {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: #f8f8f8;
+        max-height: 180px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+      }
+      .combined-report-controls {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: #eef;
+      }
+      .combined-report-controls select, .combined-report-controls input {
+        margin-bottom: 10px;
+      }
+      .admin-combined-report-result { margin-top: 10px; }
+      .admin-report-export-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .admin-report-export-container button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        flex: 1;
+        margin: 0 5px;
+      }
+      .admin-report-export-container button:hover { background-color: #45a049; }
+      .admin-userlist-export {
+        text-align: center;
+        margin-top: 10px;
+      }
+      .admin-userlist-export button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .admin-userlist-export button:hover { background-color: #45a049; }
+      .moveable-tabs {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+      }
+      .moveable-tabs li { margin-right: 2px; cursor: move; }
+      .suspended { background-color: #ffdddd !important; }
+      @media (max-width: 600px) {
+        .container { margin: 70px 0 60px 0; padding: 10px; }
+        .header { font-size: 1em; }
+        .bottom-nav .tab { font-size: 0.95em; padding: 8px 0; }
+        .logout-btn { min-width: 60px; min-height: 38px; font-size: 1em; }
+      }
+    </style>
+    <script>
+      $(function () {
+        // Enable sorting for bottom nav
+        $("#bottomNavTabs").sortable({
+          axis: "x", containment: "parent",
+        });
+      
+        // Toggle Registration and Recover sections on auth page
+        $("#showRegister").click(function () {
+          $("#loginFormSection").slideUp();
+          $("#recoverFormSection").slideUp();
+          $("#registerFormSection").slideDown();
+        });
+      
+        $("#showLogin").click(function () {
+          $("#registerFormSection").slideUp();
+          $("#recoverFormSection").slideUp();
+          $("#loginFormSection").slideDown();
+        });
+      
+        $("#showRecover").click(function () {
+          $("#registerFormSection").slideUp();
+          $("#loginFormSection").slideUp();
+          $("#recoverFormSection").slideDown();
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Authentication Page: Login, Register and Recover Password combined -->
+    <div id="authPage" class="container">
+      <h1>Welcome to Expense Tracker</h1>
+      <div id="loginFormSection" class="auth-form">
+        <h2>Login</h2>
+        <form id="loginForm">
+          <input type="text" id="loginUsername" placeholder="Enter Username" required />
+          <input type="password" id="loginPassword" placeholder="Enter Password" required />
+          <button type="button" onclick="loginUser()">Login</button>
+        </form>
+        <span id="showRegister" class="toggle-link">No account? Register here</span>
+        <span id="showRecover" class="toggle-link">Forgot Password?</span>
+      </div>
+      <div id="registerFormSection" class="auth-form hidden">
+        <h2>Register</h2>
+        <form id="registerForm">
+          <input type="text" id="registerName" placeholder="Enter Full Name" required />
+          <input type="text" id="registerUsername" placeholder="Enter Username" required />
+          <input type="password" id="registerPassword" placeholder="Enter Password" required />
+          <button type="button" onclick="registerUser()">Register</button>
+        </form>
+        <span id="showLogin" class="toggle-link">Back to Login</span>
+      </div>
+      <div id="recoverFormSection" class="auth-form hidden">
+        <h2>Recover Password</h2>
+        <form id="recoverForm">
+          <input type="text" id="recoverUsername" placeholder="Enter Username" required />
+          <button type="button" onclick="recoverPassword()">Recover</button>
+        </form>
+        <span id="showLogin" class="toggle-link">Back to Login</span>
+      </div>
+    </div>
+  
+    <!-- Expense Tracker Main Page -->
+    <div id="expenseTrackerPage" style="display: none;">
+      <div class="header">
+        <div class="user-fullname" id="userFullName"></div>
+        <h1>Expense Tracker</h1>
+        <div>
+          <span class="balance-display" id="realTimeBalance">Balance: ৳0</span>
+        </div>
+      </div>
+  
+      <!-- Data Entry (Home) -->
+      <div class="container" id="homeSection">
+        <div class="tabs">
+          <div class="tab active" id="incomeTabMain" onclick="showIncomeForm()">Income</div>
+          <div class="tab" id="expenseTabMain" onclick="showExpenseForm()">Expense</div>
+        </div>
+        <div id="income-tab" class="tab-content active">
+          <h2>Add Income</h2>
+          <form id="incomeForm">
+            <input type="text" id="incomeDescription" placeholder="Income Description (e.g., Salary, Bonus)" required />
+            <input type="number" id="incomeAmount" placeholder="Amount" required />
+            <input type="date" id="incomeDate" required />
+            <button type="button" onclick="addIncome()" class="save-btn">Save</button>
+          </form>
+        </div>
+        <div id="expense-tab" class="tab-content">
+          <h2>Add Expense</h2>
+          <form id="expenseForm">
+            <input type="text" id="expenseDescription" placeholder="Expense Description (e.g., Rent, Groceries)" required />
+            <input type="number" id="expenseAmount" placeholder="Amount" required />
+            <input type="date" id="expenseDate" required />
+            <button type="button" onclick="addExpense()" class="save-btn">Save</button>
+          </form>
+        </div>
+      </div>
+  
+      <!-- Report Section -->
+      <div class="container" id="reportTabs" style="display: none;">
+        <div class="tabs">
+          <div class="tab active" data-tab="monthly-report-tab" onclick="$('.tab-content').removeClass('active'); $('#monthly-report-tab').addClass('active');">
+            Monthly Report
+          </div>
+          <div class="tab" data-tab="date-range-report-tab" onclick="$('.tab-content').removeClass('active'); $('#date-range-report-tab').addClass('active');">
+            Date-to-Date Report
+          </div>
+        </div>
+        <div id="monthly-report-tab" class="tab-content active">
+          <h3>Select Month:</h3>
+          <input type="month" id="reportMonth" />
+          <div class="admin-report-export-container">
+            <button onclick="generateMonthlyReport()">Generate Report</button>
+            <button onclick="exportToExcelWithEnhancedCategories('monthlyReportSummary','Monthly_Report')">Export to Excel</button>
+          </div>
+          <div id="monthlyCombinedReportResult" class="report-summary admin-combined-report-result"></div>
+        </div>
+        <div id="date-range-report-tab" class="tab-content">
+          <h3>Select Date Range:</h3>
+          <input type="date" id="startDate" />
+          <input type="date" id="endDate" />
+          <div class="admin-report-export-container">
+            <button onclick="generateDateRangeReport()">Generate Report</button>
+            <button onclick="exportToExcelWithEnhancedCategories('dateRangeReportSummary','Date_Range_Report')">Export to Excel</button>
+          </div>
+          <div id="dateRangeCombinedReportResult" class="report-summary admin-combined-report-result"></div>
+        </div>
+      </div>
+  
+      <!-- Team Members Section (For Normal Users) -->
+      <div class="container" id="teamMembersSection">
+        <h2>Team Members</h2>
+        <form id="teamMemberForm">
+          <input type="text" id="teamMemberName" placeholder="Team Member Full Name" required />
+          <input type="text" id="teamMemberUsername" placeholder="Team Member Username" required />
+          <input type="password" id="teamMemberPassword" placeholder="Team Member Password" required />
+          <button type="button" onclick="addTeamMember()">Add Team Member</button>
+        </form>
+        <div class="team-member-list" id="teamMemberList"></div>
+        <div class="admin-userlist-export">
+          <button onclick="exportTeamMemberListToExcel()">Export Team Member List to Excel</button>
+        </div>
+      </div>
+  
+      <!-- Transaction List Section -->
+      <div class="container" id="transactionListSection" style="display: none;">
+        <h2>Transaction List</h2>
+        <table id="transactionListTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Entry Person</th>
+              <th>Description</th>
+              <th>Income (৳)</th>
+              <th>Expense (৳)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="transactionListBody"></tbody>
+        </table>
+      </div>
+  
+      <!-- Admin Panel Section -->
+      <div class="container" id="adminPanelSection" style="display:none;">
+        <h2>System Admin Panel</h2>
+        <h3>Users and Their Team Members</h3>
+        <table class="admin-user-list-table" border="1" style="width:100%;">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Actions</th>
+              <th>Password</th>
+              <th>Select</th>
+            </tr>
+          </thead>
+          <tbody id="adminUserListBody"></tbody>
+        </table>
+        <div class="admin-userlist-export">
+          <button onclick="exportAdminUserListToExcel()">Export User List to Excel</button>
+        </div>
+        <br />
+        <div class="combined-report-controls">
+          <h3>Combined Report Options</h3>
+          <div>
+            <label>Report Type:</label>
+            <select id="adminCombinedReportType" onchange="toggleAdminCombinedReportInputs()">
+              <option value="all">All Transactions</option>
+              <option value="monthly">Monthly Report</option>
+              <option value="daterange">Date-to-Date Report</option>
+            </select>
+          </div>
+          <div id="adminCombinedReportMonthContainer" style="display:none;">
+            <input type="month" id="adminCombinedReportMonth" />
+          </div>
+          <div id="adminCombinedDateRangeContainer" style="display:none;">
+            <input type="date" id="adminCombinedStartDate" />
+            <input type="date" id="adminCombinedEndDate" />
+          </div>
+        </div>
+        <div class="admin-report-export-container">
+          <button onclick="adminGenerateCombinedReportFromCheckboxes()">Generate Combined Report</button>
+          <button onclick="exportAdminReportToExcel()">Export Report to Excel</button>
+        </div>
+        <br />
+        <div id="adminCombinedReportResult" class="report-summary admin-combined-report-result"></div>
+        <br />
+        <div id="adminUserDataView" class="admin-user-data-section"></div>
+      </div>
+  
+      <!-- Bottom Navigation -->
+      <div class="bottom-nav-outer">
+        <ul id="bottomNavTabs" class="moveable-tabs bottom-nav">
+          <li class="tab" id="homeTab" onclick="showHomeSection()">Home</li>
+          <li class="tab" id="transactionTab" onclick="showTransactionListSection()">Transaction List</li>
+          <li class="tab" id="reportTab" onclick="showReportTabs()">Report</li>
+          <li class="tab" id="teamTab" onclick="showTeamSection()" style="display: none;">Team</li>
+          <li class="tab" id="adminTab" style="display:none;" onclick="showAdminPanel()">Admin Panel</li>
+        </ul>
+        <button class="logout-btn" onclick="logoutUser()" id="logoutFixedBtn">Logout</button>
+      </div>
+    </div>
+  
+    <script>
+      let users = { admin: { name: "System Admin", password: "admin", transactions: [], suspended: false } };
+      let loggedInUser = null;
+      let transactions = [];
+      let adminViewUser = null;
+      let editingIndex = null;
+      let adminCombinedTransactions = [];
+  
+      function saveData() {
+        localStorage.setItem("expenseTrackerUsers", JSON.stringify(users));
+      }
+      function loadData() {
+        const data = localStorage.getItem("expenseTrackerUsers");
+        if (data) {
+          users = JSON.parse(data);
+        }
+      }
+      loadData();
+  
+      function showAuthPage() {
+        document.getElementById("authPage").style.display = "block";
+        document.getElementById("expenseTrackerPage").style.display = "none";
+        document.getElementById("logoutFixedBtn").style.display = "none";
+      }
+  
+      function showExpenseTrackerPage() {
+        document.getElementById("authPage").style.display = "none";
+        document.getElementById("expenseTrackerPage").style.display = "block";
+        document.getElementById("logoutFixedBtn").style.display = "block";
+        if (loggedInUser && users[loggedInUser]) {
+          if (loggedInUser === "admin") {
+            document.getElementById("adminTab").style.display = "block";
+            document.getElementById("teamTab").style.display = "none";
+          } else if (users[loggedInUser].linkedTo) {
+            document.getElementById("teamTab").style.display = "none";
+            document.getElementById("adminTab").style.display = "none";
+          } else {
+            document.getElementById("teamTab").style.display = "block";
+            document.getElementById("adminTab").style.display = "none";
+          }
+          document.getElementById("userFullName").textContent = users[loggedInUser].name;
+        } else {
+          document.getElementById("userFullName").textContent = "";
+        }
+        showHomeSection();
+        renderTransactionList();
+        setTodayAsDefaultDate();
+      }
+  
+      function showHomeSection() {
+        document.getElementById("homeSection").style.display = "block";
+        document.getElementById("transactionListSection").style.display = "none";
+        document.getElementById("reportTabs").style.display = "none";
+        document.getElementById("teamMembersSection").style.display = "none";
+        document.getElementById("adminPanelSection").style.display = "none";
+        setBottomTabActive("homeTab");
+        showIncomeForm();
+      }
+  
+      function showTransactionListSection() {
+        document.getElementById("homeSection").style.display = "none";
+        document.getElementById("transactionListSection").style.display = "block";
+        document.getElementById("reportTabs").style.display = "none";
+        document.getElementById("teamMembersSection").style.display = "none";
+        document.getElementById("adminPanelSection").style.display = "none";
+        setBottomTabActive("transactionTab");
+        renderTransactionList();
+      }
+  
+      function showReportTabs() {
+        document.getElementById("homeSection").style.display = "none";
+        document.getElementById("transactionListSection").style.display = "none";
+        document.getElementById("reportTabs").style.display = "block";
+        document.getElementById("teamMembersSection").style.display = "none";
+        document.getElementById("adminPanelSection").style.display = "none";
+        setBottomTabActive("reportTab");
+      }
+  
+      function showTeamSection() {
+        document.getElementById("homeSection").style.display = "none";
+        document.getElementById("transactionListSection").style.display = "none";
+        document.getElementById("reportTabs").style.display = "none";
+        document.getElementById("teamMembersSection").style.display = "block";
+        document.getElementById("adminPanelSection").style.display = "none";
+        setBottomTabActive("teamTab");
+        renderTeamMembers();
+      }
+  
+      function showAdminPanel() {
+        document.getElementById("homeSection").style.display = "none";
+        document.getElementById("transactionListSection").style.display = "none";
+        document.getElementById("reportTabs").style.display = "none";
+        document.getElementById("teamMembersSection").style.display = "none";
+        document.getElementById("adminPanelSection").style.display = "block";
+        setBottomTabActive("adminTab");
+        renderAdminUserList();
+        populateAdminUserCheckboxes();
+        document.getElementById("adminUserDataView").innerHTML = "";
+        adminViewUser = null;
+      }
+  
+      function setBottomTabActive(tabId) {
+        let tabs = ["homeTab", "transactionTab", "reportTab", "teamTab", "adminTab"];
+        tabs.forEach((id) => {
+          let el = document.getElementById(id);
+          if (el) {
+            el.classList.remove("active");
+          }
+        });
+        document.getElementById(tabId).classList.add("active");
+      }
+  
+      function setTodayAsDefaultDate() {
+        const today = new Date().toISOString().split("T")[0];
+        const incomeDate = document.getElementById("incomeDate");
+        const expenseDate = document.getElementById("expenseDate");
+        if (incomeDate) incomeDate.value = today;
+        if (expenseDate) expenseDate.value = today;
+      }
+  
+      function registerUser() {
+        const name = document.getElementById("registerName").value.trim();
+        const username = document.getElementById("registerUsername").value.trim();
+        const password = document.getElementById("registerPassword").value.trim();
+        if (!name || !username || !password) {
+          alert("Please enter your full name, username and password!");
+          return;
+        }
+        if (users[username]) {
+          alert("Username already exists! Please choose another.");
+          return;
+        }
+        const fullName = username === "admin" ? "System Admin" : name;
+        users[username] = { name: fullName, password, transactions: [], suspended: false };
+        saveData();
+        alert("Registration successful! You can now log in.");
+        document.getElementById("registerName").value = "";
+        document.getElementById("registerUsername").value = "";
+        document.getElementById("registerPassword").value = "";
+        $("#registerFormSection").slideUp();
+        $("#loginFormSection").slideDown();
+      }
+  
+      function loginUser() {
+        const username = document.getElementById("loginUsername").value.trim();
+        const password = document.getElementById("loginPassword").value.trim();
+        if (!username || !password) {
+          alert("Please enter both username and password!");
+          return;
+        }
+        const user = users[username];
+        if (!user || user.password !== password) {
+          alert("Invalid username or password!");
+          return;
+        }
+        if (user.suspended) {
+          alert("Your account is suspended. Please contact the system admin.");
+          return;
+        }
+        loggedInUser = username;
+        if (user.linkedTo) {
+          transactions = users[user.linkedTo].transactions;
+        } else {
+          transactions = user.transactions;
+        }
+        alert(`Welcome, ${user.name}!`);
+        updateBalance();
+        showExpenseTrackerPage();
+      }
+  
+      function recoverPassword() {
+        const username = document.getElementById("recoverUsername").value.trim();
+        if (!username) {
+          alert("Please enter your username!");
+          return;
+        }
+        if (!users[username]) {
+          alert("Username not found!");
+          return;
+        }
+        alert(`Your password is: ${users[username].password}`);
+        document.getElementById("recoverUsername").value = "";
+      }
+  
+      function logoutUser() {
+        loggedInUser = null;
+        transactions = [];
+        adminViewUser = null;
+        showAuthPage();
+      }
+  
+      function showIncomeForm() {
+        document.getElementById("incomeTabMain").classList.add("active");
+        document.getElementById("expenseTabMain").classList.remove("active");
+        document.getElementById("income-tab").classList.add("active");
+        document.getElementById("expense-tab").classList.remove("active");
+        setTodayAsDefaultDate();
+      }
+  
+      function showExpenseForm() {
+        document.getElementById("expenseTabMain").classList.add("active");
+        document.getElementById("incomeTabMain").classList.remove("active");
+        document.getElementById("expense-tab").classList.add("active");
+        document.getElementById("income-tab").classList.remove("active");
+        setTodayAsDefaultDate();
+      }
+  
+      function addIncome() { addTransaction("Income", "incomeDescription", "incomeAmount", "incomeDate"); }
+      function addExpense() { addTransaction("Expense", "expenseDescription", "expenseAmount", "expenseDate"); }
+  
+      function addTransaction(type, descId, amountId, dateId) {
+        const description = document.getElementById(descId).value.trim();
+        const amount = parseFloat(document.getElementById(amountId).value);
+        const date = document.getElementById(dateId).value;
+        if (loggedInUser === null) {
+          alert("Please log in to add transactions!");
+          return;
+        }
+        if (description && amount && date) {
+          if (editingIndex !== null) {
+            const originalEntry = transactions[editingIndex].entryPerson;
+            transactions[editingIndex] = { description, amount, type, date, entryPerson: originalEntry };
+            editingIndex = null;
+          } else {
+            transactions.push({ description, amount, type, date, entryPerson: loggedInUser });
+          }
+          if (users[loggedInUser].linkedTo) {
+            users[users[loggedInUser].linkedTo].transactions = transactions;
+          } else {
+            users[loggedInUser].transactions = transactions;
+          }
+          saveData();
+          updateBalance();
+          renderTransactionList();
+          document.getElementById(descId).value = "";
+          document.getElementById(amountId).value = "";
+          setTodayAsDefaultDate();
+        } else {
+          alert("Please fill out all fields!");
+        }
+      }
+  
+      // Modified: Transactions will be rendered with the most recent (largest date) first.
+      function updateBalance() {
+        const totalIncome = transactions.filter((t) => t.type === "Income").reduce((sum, t) => sum + t.amount, 0);
+        const totalExpense = transactions.filter((t) => t.type === "Expense").reduce((sum, t) => sum + t.amount, 0);
+        document.getElementById("realTimeBalance").textContent = `Balance: ৳${totalIncome - totalExpense}`;
+      }
+  
+      function renderTransactionList() {
+        const tbody = document.getElementById("transactionListBody");
+        tbody.innerHTML = "";
+        // Render transactions in descending order by date
+        const sortedTransactions = transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+        sortedTransactions.forEach((t, idx) => {
+          // Find the true index from original transactions array for edit and delete.
+          const originalIndex = transactions.indexOf(t);
+          if (editingIndex === originalIndex) {
+            tbody.innerHTML += `
+              <tr>
+                <td><input type="date" id="editDate${originalIndex}" value="${t.date}" /></td>
+                <td>${t.entryPerson || ""}</td>
+                <td><input type="text" id="editDesc${originalIndex}" value="${t.description}" /></td>
+                <td>${t.type === "Income" ? `<input type="number" id="editAmount${originalIndex}" value="${t.amount}" />` : ""}</td>
+                <td>${t.type === "Expense" ? `<input type="number" id="editAmount${originalIndex}" value="${t.amount}" />` : ""}</td>
+                <td>
+                  <button class="action-btn save-btn" onclick="saveEdit(${originalIndex})">Save</button>
+                  <button class="action-btn cancel-btn" onclick="cancelEdit()">Cancel</button>
+                </td>
+              </tr>
+            `;
+          } else {
+            tbody.innerHTML += `
+              <tr>
+                <td>${t.date}</td>
+                <td>${t.entryPerson || ""}</td>
+                <td>${t.description}</td>
+                <td>${t.type === "Income" ? `৳${t.amount}` : ""}</td>
+                <td>${t.type === "Expense" ? `৳${t.amount}` : ""}</td>
+                <td>
+                  <button class="action-btn edit-btn" onclick="editTransaction(${originalIndex})">Edit</button>
+                  <button class="action-btn delete-btn" onclick="deleteTransaction(${originalIndex})">Delete</button>
+                </td>
+              </tr>
+            `;
+          }
+        });
+      }
+  
+      function editTransaction(index) { editingIndex = index; renderTransactionList(); }
+      function cancelEdit() { editingIndex = null; renderTransactionList(); }
+      function saveEdit(index) {
+        const date = document.getElementById(`editDate${index}`).value;
+        const desc = document.getElementById(`editDesc${index}`).value.trim();
+        const amount = parseFloat(document.getElementById(`editAmount${index}`).value);
+        if (!date || !desc || !amount) {
+          alert("Please fill out all fields!");
+          return;
+        }
+        const originalEntry = transactions[index].entryPerson;
+        transactions[index] = { ...transactions[index], date, description: desc, amount, entryPerson: originalEntry };
+        if (users[loggedInUser].linkedTo) {
+          users[users[loggedInUser].linkedTo].transactions = transactions;
+        } else {
+          users[loggedInUser].transactions = transactions;
+        }
+        saveData();
+        editingIndex = null;
+        updateBalance();
+        renderTransactionList();
+      }
+  
+      function deleteTransaction(index) {
+        if (confirm("Are you sure you want to delete this transaction?")) {
+          transactions.splice(index, 1);
+          if (users[loggedInUser].linkedTo) {
+            users[users[loggedInUser].linkedTo].transactions = transactions;
+          } else {
+            users[loggedInUser].transactions = transactions;
+          }
+          saveData();
+          updateBalance();
+          renderTransactionList();
+        }
+      }
+  
+      // In report generation, sort transactions descending by date (latest first)
+      function generateMonthlyReport() {
+        const selectedMonth = document.getElementById("reportMonth").value;
+        if (!selectedMonth) {
+          alert("Please select a month!");
+          return;
+        }
+        const monthlyTransactions = transactions.filter((t) => t.date.startsWith(selectedMonth));
+        generateCategorizedSummary(monthlyTransactions, "monthlyCombinedReportResult");
+      }
+  
+      function generateDateRangeReport() {
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+        if (!startDate || !endDate) {
+          alert("Please select both start and end dates!");
+          return;
+        }
+        const dateRangeTransactions = transactions.filter((t) => t.date >= startDate && t.date <= endDate);
+        generateCategorizedSummary(dateRangeTransactions, "dateRangeCombinedReportResult");
+      }
+  
+      // Reports show transactions sorted descending (latest first)
+      function generateCategorizedSummary(filteredTransactions, targetId) {
+        const incomeCategories = {}, expenseCategories = {};
+        filteredTransactions.forEach((t) => {
+          if (t.type === "Income") {
+            incomeCategories[t.description] = (incomeCategories[t.description] || 0) + t.amount;
+          } else if (t.type === "Expense") {
+            expenseCategories[t.description] = (expenseCategories[t.description] || 0) + t.amount;
+          }
+        });
+        const totalIncome = Object.values(incomeCategories).reduce((sum, amt) => sum + amt, 0);
+        const totalExpense = Object.values(expenseCategories).reduce((sum, amt) => sum + amt, 0);
+        const balance = totalIncome - totalExpense;
+        const sortedTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const incomeSummaryHTML = Object.entries(incomeCategories)
+          .map(([desc, amt]) => `<div>${desc}: ৳${amt}</div>`)
+          .join("");
+        const expenseSummaryHTML = Object.entries(expenseCategories)
+          .map(([desc, amt]) => `<div>${desc}: ৳${amt}</div>`)
+          .join("");
+        const transactionListHTML = sortedTransactions
+          .map((t) => `
+          <tr>
+            <td>${t.date}</td>
+            <td>${t.entryPerson || ""}</td>
+            <td>${t.description}</td>
+            <td>${t.type === "Income" ? `৳${t.amount}` : ""}</td>
+            <td>${t.type === "Expense" ? `৳${t.amount}` : ""}</td>
+          </tr>
+        `)
+          .join("");
+        document.getElementById(targetId).innerHTML = `
+          <h3>Summary:</h3>
+          <div><strong>Total Income:</strong> ৳${totalIncome}</div>
+          <div><strong>Total Expenses:</strong> ৳${totalExpense}</div>
+          <div><strong>${balance >= 0 ? "Savings" : "Debt"}:</strong> ৳${Math.abs(balance)}</div>
+          <h3>Income (Category-wise):</h3>
+          ${incomeSummaryHTML}
+          <h3>Expenses (Category-wise):</h3>
+          ${expenseSummaryHTML}
+          <h3>All Transactions:</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Entry Person</th>
+                <th>Description</th>
+                <th>Income (৳)</th>
+                <th>Expense (৳)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transactionListHTML}
+            </tbody>
+          </table>
+        `;
+      }
+  
+      function exportToExcelWithEnhancedCategories(summaryId, filename) {
+        const dateWiseRows = [["Date", "Entry Person", "Details", "Income (৳)", "Expense (৳)"]];
+        transactions.forEach((t) => {
+          dateWiseRows.push([
+            t.date,
+            t.entryPerson || "",
+            t.description,
+            t.type === "Income" ? t.amount : "",
+            t.type === "Expense" ? t.amount : ""
+          ]);
+        });
+        const totalIncome = transactions.filter((t) => t.type === "Income").reduce((s, t) => s + t.amount, 0);
+        const totalExpense = transactions.filter((t) => t.type === "Expense").reduce((s, t) => s + t.amount, 0);
+        const balance = totalIncome - totalExpense;
+        dateWiseRows.push([]);
+        dateWiseRows.push(["", "", "Total Income", totalIncome, ""]);
+        dateWiseRows.push(["", "", "Total Expense", "", totalExpense]);
+        dateWiseRows.push(["", "", "Balance", balance, ""]);
+        const incomeCategories = {}, expenseCategories = {};
+        transactions.forEach((t) => {
+          if (t.type === "Income") {
+            incomeCategories[t.description] = (incomeCategories[t.description] || 0) + t.amount;
+          } else if (t.type === "Expense") {
+            expenseCategories[t.description] = (expenseCategories[t.description] || 0) + t.amount;
+          }
+        });
+        const categoryWiseRows = [["Category", "Income (৳)", "Expense (৳)"]];
+        categoryWiseRows.push(["--- Income ---", "", ""]);
+        Object.keys(incomeCategories).forEach((category) => {
+          categoryWiseRows.push([category, incomeCategories[category], ""]);
+        });
+        categoryWiseRows.push(["Total Income", totalIncome, ""]);
+        categoryWiseRows.push([]);
+        categoryWiseRows.push(["--- Expenses ---", "", ""]);
+        Object.keys(expenseCategories).forEach((category) => {
+          categoryWiseRows.push([category, "", expenseCategories[category]]);
+        });
+        categoryWiseRows.push(["Total Expenses", "", totalExpense]);
+        categoryWiseRows.push([]);
+        categoryWiseRows.push(["Balance", "", balance]);
+        const wb = XLSX.utils.book_new();
+        const dateWiseSheet = XLSX.utils.aoa_to_sheet(dateWiseRows);
+        const categoryWiseSheet = XLSX.utils.aoa_to_sheet(categoryWiseRows);
+        XLSX.utils.book_append_sheet(wb, dateWiseSheet, "Date-wise Report");
+        XLSX.utils.book_append_sheet(wb, categoryWiseSheet, "Category-wise Report");
+        XLSX.writeFile(wb, `${filename}.xlsx`);
+      }
+      
+      function addTeamMember() {
+        const name = document.getElementById("teamMemberName").value.trim();
+        const username = document.getElementById("teamMemberUsername").value.trim();
+        const password = document.getElementById("teamMemberPassword").value.trim();
+        if (!name || !username || !password) {
+          alert("Please fill out all team member fields!");
+          return;
+        }
+        if (users[username]) {
+          alert("This username already exists!");
+          return;
+        }
+        users[username] = { name, password, transactions: [], linkedTo: loggedInUser, isTeamMember: true, suspended: false };
+        saveData();
+        alert("Team member added successfully!");
+        document.getElementById("teamMemberName").value = "";
+        document.getElementById("teamMemberUsername").value = "";
+        document.getElementById("teamMemberPassword").value = "";
+        renderTeamMembers();
+      }
+      
+      function renderTeamMembers() {
+        let teamList = Object.keys(users).filter((u) => users[u].linkedTo === loggedInUser);
+        let html = "";
+        if (teamList.length === 0) {
+          html = "<p>No team members added yet.</p>";
+        } else {
+          html = `<table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>`;
+          teamList.forEach((username) => {
+            let member = users[username];
+            let rowClass = member.suspended ? "suspended" : "";
+            let statusText = member.suspended ? "Suspended" : "Active";
+            html += `<tr class="${rowClass}">
+                        <td>${username}</td>
+                        <td>${member.name}</td>
+                        <td>${statusText}</td>
+                        <td style="display:flex; flex-direction:row-reverse; gap:5px;">
+                          <select class="admin-action-dropdown" onchange="onSelectAdminAction(this, '${username}')">
+                            <option value="">Select Action</option>
+                            <option value="toggleSuspend">${member.suspended ? "Activate" : "Suspend"}</option>
+                            <option value="resetPassword">Reset Password</option>
+                            <option value="deleteUser">Delete</option>
+                          </select>
+                          <button class="take-action-btn" style="display:none;" onclick="processAdminAction(this, '${username}')">Take Action</button>
+                        </td>
+                     </tr>`;
+          });
+          html += `</tbody></table>`;
+        }
+        document.getElementById("teamMemberList").innerHTML = html;
+      }
+      
+      function deleteTeamMember(username) {
+        if (confirm("Are you sure you want to delete this team member?")) {
+          delete users[username];
+          saveData();
+          renderTeamMembers();
+          renderAdminUserList();
+        }
+      }
+      
+      function renderAdminUserList() {
+        const tbody = document.getElementById("adminUserListBody");
+        tbody.innerHTML = "";
+        Object.keys(users).forEach((username) => {
+          let user = users[username];
+          if (!user.linkedTo) {
+            let rowClass = user.suspended ? "suspended" : "";
+            let status = user.suspended ? "Suspended" : "Active";
+            tbody.innerHTML += `
+              <tr class="normal-user-row ${rowClass}" onclick="toggleTeamRow('${username}')" style="cursor:pointer;">
+                <td>${username}</td>
+                <td>${user.name}</td>
+                <td>${status}</td>
+                <td style="position:relative;">
+                  <select class="admin-action-dropdown" onchange="onSelectAdminAction(this, '${username}')">
+                    <option value="">Select Action</option>
+                    <option value="show">Show</option>
+                    <option value="toggleSuspend">${user.suspended ? "Activate" : "Suspend"}</option>
+                    <option value="resetPassword">Reset Password</option>
+                    <option value="deleteUser">Delete User</option>
+                  </select>
+                  <button class="take-action-btn" style="display:none;" onclick="processAdminAction(this, '${username}')">Take Action</button>
+                </td>
+                <td>${user.password}</td>
+                <td><input type="checkbox" class="admin-user-checkbox" value="${username}" /></td>
+              </tr>
+              <tr id="teamRow_${username}" style="display:none;">
+                <td colspan="7" id="teamCell_${username}"></td>
+              </tr>
+            `;
+          }
+        });
+      }
+      
+      function toggleTeamRow(username) {
+        const teamRow = document.getElementById("teamRow_" + username);
+        if (teamRow.style.display === "none") {
+          let teamMembers = Object.keys(users).filter((u) => users[u].linkedTo === username);
+          let subTable = "";
+          if (teamMembers.length > 0) {
+            subTable = `<table style="width:90%; margin:10px auto; border:1px dashed #aaa;">
+                  <thead>
+                    <tr>
+                      <th>Team Member Username</th>
+                      <th>Name</th>
+                      <th>Password</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+            teamMembers.forEach((tm) => {
+              let member = users[tm];
+              let rowClass = member.suspended ? "suspended" : "";
+              let mStatus = member.suspended ? "Suspended" : "Active";
+              let btnText = member.suspended ? "Activate" : "Suspend";
+              subTable += `
+                  <tr class="${rowClass}">
+                    <td>${tm}</td>
+                    <td>${member.name}</td>
+                    <td>${member.password}</td>
+                    <td>${mStatus}</td>
+                    <td style="position:relative; display:flex; flex-direction:row-reverse; gap:5px;">
+                      <select class="admin-action-dropdown" onchange="onSelectAdminAction(this, '${tm}')">
+                        <option value="">Select Action</option>
+                        <option value="toggleSuspend">${btnText}</option>
+                        <option value="resetPassword">Reset Password</option>
+                        <option value="deleteUser">Delete</option>
+                      </select>
+                      <button class="take-action-btn" style="display:none;" onclick="processAdminAction(this, '${tm}')">Take Action</button>
+                    </td>
+                  </tr>
+                `;
+            });
+            subTable += `</tbody></table>`;
+          } else {
+            subTable = "<p>No team members linked.</p>";
+          }
+          document.getElementById("teamCell_" + username).innerHTML = subTable;
+          teamRow.style.display = "table-row";
+        } else {
+          teamRow.style.display = "none";
+        }
+      }
+      
+      function adminDeleteTeamMember(username) {
+        if (confirm("Are you sure you want to delete this team member?")) {
+          delete users[username];
+          saveData();
+          renderAdminUserList();
+        }
+      }
+      
+      function adminShowUserData(username) {
+        adminViewUser = username;
+        const user = users[username];
+        if (!user) {
+          document.getElementById("adminUserDataView").innerHTML = "<div>User not found.</div>";
+          return;
+        }
+        let transactionsToShow = user.transactions || [];
+        let totalIncome = transactionsToShow.filter((t) => t.type === "Income").reduce((sum, t) => sum + t.amount, 0);
+        let totalExpense = transactionsToShow.filter((t) => t.type === "Expense").reduce((sum, t) => sum + t.amount, 0);
+        let balance = totalIncome - totalExpense;
+        let summary = `
+          <h3>Report for <b>${user.name} (${username})</b></h3>
+          <div><strong>Total Income:</strong> ৳${totalIncome}</div>
+          <div><strong>Total Expenses:</strong> ৳${totalExpense}</div>
+          <div><strong>${balance >= 0 ? "Savings" : "Debt"}:</strong> ৳${Math.abs(balance)}</div>
+          <h3>All Transactions:</h3>
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Entry Person</th>
+                <th>Description</th>
+                <th>Income (৳)</th>
+                <th>Expense (৳)</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        // Sort descending for admin view as well
+        const sortedTrans = (transactionsToShow || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+        summary += sortedTrans.map((t) => `
+          <tr>
+            <td>${t.date}</td>
+            <td>${t.entryPerson || ""}</td>
+            <td>${t.description}</td>
+            <td>${t.type === "Income" ? `৳${t.amount}` : ""}</td>
+            <td>${t.type === "Expense" ? `৳${t.amount}` : ""}</td>
+          </tr>
+        `).join("");
+        summary += "</tbody></table>";
+        document.getElementById("adminUserDataView").innerHTML = summary;
+      }
+      
+      function adminToggleSuspend(username) {
+        if (username === "admin") {
+          alert("Cannot suspend the admin account.");
+          return;
+        }
+        users[username].suspended = !users[username].suspended;
+        saveData();
+        renderAdminUserList();
+        if (adminViewUser) {
+          adminShowUserData(adminViewUser);
+        }
+      }
+      
+      function adminResetPassword(username) {
+        let newPassword = prompt("Enter new password for " + username + ":");
+        if (newPassword && newPassword.trim().length > 0) {
+          users[username].password = newPassword.trim();
+          saveData();
+          alert("Password reset for " + username);
+          renderAdminUserList();
+        }
+      }
+      
+      function adminDeleteUser(username) {
+        if (confirm("Are you sure you want to delete user " + username + "?\nAll linked team members will also be deleted.")) {
+          Object.keys(users).forEach((u) => {
+            if (users[u].linkedTo === username) {
+              delete users[u];
+            }
+          });
+          delete users[username];
+          saveData();
+          renderAdminUserList();
+        }
+      }
+      
+      function populateAdminUserCheckboxes() {
+        renderAdminUserList();
+      }
+      
+      function adminGenerateCombinedReportFromCheckboxes() {
+        const checkboxes = document.querySelectorAll(".admin-user-checkbox");
+        let selectedUsers = [];
+        checkboxes.forEach((cb) => {
+          if (cb.checked) {
+            selectedUsers.push(cb.value);
+          }
+        });
+        if (selectedUsers.length === 0) {
+          alert("Please select at least one user to generate combined report.");
+          return;
+        }
+        let combinedTransactions = [];
+        selectedUsers.forEach((username) => {
+          if (users[username]) {
+            combinedTransactions = combinedTransactions.concat(users[username].transactions || []);
+          }
+        });
+        let reportType = document.getElementById("adminCombinedReportType").value;
+        let filteredTransactions = combinedTransactions;
+        if (reportType === "monthly") {
+          const month = document.getElementById("adminCombinedReportMonth").value;
+          if (!month) {
+            alert("Please select a month.");
+            return;
+          }
+          filteredTransactions = combinedTransactions.filter((t) => t.date.startsWith(month));
+        } else if (reportType === "daterange") {
+          const startDate = document.getElementById("adminCombinedStartDate").value;
+          const endDate = document.getElementById("adminCombinedEndDate").value;
+          if (!startDate || !endDate) {
+            alert("Please select both start and end dates.");
+            return;
+          }
+          filteredTransactions = combinedTransactions.filter((t) => t.date >= startDate && t.date <= endDate);
+        }
+        adminCombinedTransactions = filteredTransactions;
+        generateCategorizedSummary(filteredTransactions, "adminCombinedReportResult");
+      }
+      
+      function toggleAdminCombinedReportInputs() {
+        const reportType = document.getElementById("adminCombinedReportType").value;
+        if (reportType === "monthly") {
+          document.getElementById("adminCombinedReportMonthContainer").style.display = "block";
+          document.getElementById("adminCombinedDateRangeContainer").style.display = "none";
+        } else if (reportType === "daterange") {
+          document.getElementById("adminCombinedReportMonthContainer").style.display = "none";
+          document.getElementById("adminCombinedDateRangeContainer").style.display = "block";
+        } else {
+          document.getElementById("adminCombinedReportMonthContainer").style.display = "none";
+          document.getElementById("adminCombinedDateRangeContainer").style.display = "none";
+        }
+      }
+      
+      function exportAdminReportToExcel() {
+        if (!adminCombinedTransactions || adminCombinedTransactions.length === 0) {
+          alert("No combined report data available. Please generate a combined report first.");
+          return;
+        }
+        const dateWiseRows = [["Date", "Entry Person", "Details", "Income (৳)", "Expense (৳)"]];
+        adminCombinedTransactions.forEach((t) => {
+          dateWiseRows.push([
+            t.date,
+            t.entryPerson || "",
+            t.description,
+            t.type === "Income" ? t.amount : "",
+            t.type === "Expense" ? t.amount : ""
+          ]);
+        });
+        const totalIncome = adminCombinedTransactions.filter((t) => t.type === "Income").reduce((s, t) => s + t.amount, 0);
+        const totalExpense = adminCombinedTransactions.filter((t) => t.type === "Expense").reduce((s, t) => s + t.amount, 0);
+        const balance = totalIncome - totalExpense;
+        dateWiseRows.push([]);
+        dateWiseRows.push(["", "", "Total Income", totalIncome, ""]);
+        dateWiseRows.push(["", "", "Total Expense", "", totalExpense]);
+        dateWiseRows.push(["", "", "Balance", balance, ""]);
+        const incomeCategories = {}, expenseCategories = {};
+        adminCombinedTransactions.forEach((t) => {
+          if (t.type === "Income") {
+            incomeCategories[t.description] = (incomeCategories[t.description] || 0) + t.amount;
+          } else if (t.type === "Expense") {
+            expenseCategories[t.description] = (expenseCategories[t.description] || 0) + t.amount;
+          }
+        });
+        const categoryWiseRows = [["Category", "Income (৳)", "Expense (৳)"]];
+        categoryWiseRows.push(["--- Income ---", "", ""]);
+        Object.keys(incomeCategories).forEach((category) => {
+          categoryWiseRows.push([category, incomeCategories[category], ""]);
+        });
+        categoryWiseRows.push(["Total Income", totalIncome, ""]);
+        categoryWiseRows.push([]);
+        categoryWiseRows.push(["--- Expenses ---", "", ""]);
+        Object.keys(expenseCategories).forEach((category) => {
+          categoryWiseRows.push([category, "", expenseCategories[category]]);
+        });
+        categoryWiseRows.push(["Total Expenses", "", totalExpense]);
+        categoryWiseRows.push([]);
+        categoryWiseRows.push(["Balance", "", balance]);
+        const wb = XLSX.utils.book_new();
+        const dateWiseSheet = XLSX.utils.aoa_to_sheet(dateWiseRows);
+        const categoryWiseSheet = XLSX.utils.aoa_to_sheet(categoryWiseRows);
+        XLSX.utils.book_append_sheet(wb, dateWiseSheet, "Date-wise Report");
+        XLSX.utils.book_append_sheet(wb, categoryWiseSheet, "Category-wise Report");
+        XLSX.writeFile(wb, `Admin_Combined_Report.xlsx`);
+      }
+      
+      // For normal users, combined report option is removed.
+      function updateReportTabsVisibility() {
+        if (loggedInUser && loggedInUser !== "admin") {
+          const combinedTab = document.querySelector("#reportTabs .tabs .tab[data-tab='combined-report-tab']");
+          if (combinedTab) {
+            combinedTab.style.display = "none";
+          }
+          const combinedContent = document.getElementById("combined-report-tab");
+          if (combinedContent) {
+            combinedContent.style.display = "none";
+          }
+        }
+      }
+      
+      showAuthPage();
+      setTodayAsDefaultDate();
+      document.addEventListener("DOMContentLoaded", setTodayAsDefaultDate);
+    </script>
+  </body>
+</html>
